@@ -1,6 +1,6 @@
 pyrogram
-tgcrypto
-pytgcalls==2.0.4
+pycryptodome
+pytgcalls==3.0.0.dev23
 yt-dlp
 gTTS
 Pillow
