@@ -11,10 +11,17 @@ from config import *
 from tts import tts
 
 app = Client("music_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
-pytgcalls = PyTgCalls(app) # Bot se hi chalega
+pytgcalls = PyTgCalls(app)
 
 queue = {}
-CHATS = set() # Broadcast ke liye
+CHATS = set()
+
+# LOG bhejne ka function
+async def send_log(text):
+    try:
+        await app.send_message(LOG_GROUP, text)
+    except:
+        pass
 
 def yt_search(query):
     try:
@@ -65,7 +72,14 @@ async def welcome_both(_, message: Message):
     chat = await app.get_chat(message.chat.id)
     chat_id = message.chat.id
     CHATS.add(chat_id)
-    bot_username = (await app.get_me()).username
+
+    me = await app.get_me()
+    # Agar bot add hua hai to log bhejo
+    for new_user in message.new_chat_members:
+        if new_user.id == me.id:
+            await send_log(f"✅ **BOT ADDED**\n\n**Group:** {chat.title}\n**ID:** `{chat_id}`\n**Members:** {chat.members_count}")
+
+    bot_username = me.username
     for new_user in message.new_chat_members:
         name = new_user.first_name
         card = await create_welcome_card(new_user, chat)
@@ -92,11 +106,6 @@ async def welcome_both(_, message: Message):
                 InlineKeyboardButton("👮 OWNER", url=f"tg://user?id={OWNER_ID}"),
                 InlineKeyboardButton("📞 SUPPORT", url=SUPPORT_LINK),
                 InlineKeyboardButton("📢 CHANNEL", url=CHANNEL_LINK)
-            ],
-            [
-                InlineKeyboardButton("😂 MEMES", callback_data="memes"),
-                InlineKeyboardButton("🎁 GIVEAWAY", callback_data="giveaway"),
-                InlineKeyboardButton("❤️ REACT", callback_data="react")
             ]
         ]
         await message.reply_photo(photo=card, caption=caption, reply_markup=InlineKeyboardMarkup(buttons))
@@ -110,6 +119,14 @@ async def welcome_both(_, message: Message):
         except Exception:
             pass
         if os.path.exists(file): os.remove(file)
+
+# Bot ko kisi ne nikala to
+@app.on_message(filters.left_chat_member & filters.group)
+async def left_group(_, message: Message):
+    chat = await app.get_chat(message.chat.id)
+    me = await app.get_me()
+    if message.left_chat_member.id == me.id:
+        await send_log(f"❌ **BOT REMOVED**\n\n**Group:** {chat.title}\n**ID:** `{chat.id}`")
 
 @app.on_message(filters.command("play") & filters.group)
 async def play(_, message: Message):
@@ -171,22 +188,25 @@ async def broadcast(_, message: Message):
 
 @app.on_callback_query()
 async def cb_handler(client, query: CallbackQuery):
-    if query.data == "skip":
-        await skip(client, query.message)
-    elif query.data == "stop":
-        await stop(client, query.message)
-    elif query.data == "stats":
-        await query.answer(f"Total Groups: {len(CHATS)}")
-    elif query.data == "dashboard":
-        await query.answer("Dashboard: Use /play to start")
-    elif query.data == "lang":
-        await query.answer("Language: Hindi/English")
-    elif query.data == "memes":
-        await query.answer("Memes Coming Soon 😂")
-    elif query.data == "giveaway":
-        await query.answer("No Giveaway Active")
-    elif query.data == "react":
-        await query.answer("❤️ Thanks for reacting!")
+    try: # ERROR FIX
+        if query.data == "skip":
+            await skip(client, query.message)
+        elif query.data == "stop":
+            await stop(client, query.message)
+        elif query.data == "stats":
+            await query.answer(f"Total Groups: {len(CHATS)}")
+        elif query.data == "dashboard":
+            await query.answer("Dashboard: Use /play to start")
+        elif query.data == "lang":
+            await query.answer("Language: Hindi/English")
+        elif query.data == "memes":
+            await query.answer("Memes Coming Soon 😂")
+        elif query.data == "giveaway":
+            await query.answer("No Giveaway Active")
+        elif query.data == "react":
+            await query.answer("❤️ Thanks for reacting!")
+    except:
+        pass
 
 @pytgcalls.on_stream_end()
 async def on_stream_end(client, update):
@@ -197,5 +217,6 @@ async def on_stream_end(client, update):
         await pytgcalls.change_stream(chat_id, AudioPiped(url))
 
 print("Music Bot Started...")
+asyncio.get_event_loop().run_until_complete(send_log("🔥 **BOT STARTED** ✅"))
 pytgcalls.start()
 app.run()
