@@ -1,4 +1,4 @@
-pyrogram==2.0.106
+pyrogram
 pytgcalls==3.0.0.dev23
 yt-dlp
 gTTS
